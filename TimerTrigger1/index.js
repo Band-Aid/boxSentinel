@@ -15,24 +15,6 @@ const logicAppURL = process.env.LOGICAPPURL
 const tableService = azure.createTableService()
 const tablename = "eventstream"
 
-function getEvents(streamPosition) {
-    serviceAccountClient.getEvents({
-        stream_position: StereoPannerNode,
-        stream_type: 'admin_logs'
-    },function(err,stream){
-        if (err){
-            context.log(err)
-        }
-    })
-    .then(event=>{
-        let data = JSON.stringify(event)
-        return data
-        
-        // requestCall.post()
-    })
-}
-
-
 module.exports = async function (context, myTimer) {
     var timeStamp = new Date().toISOString();
     context.log('JavaScript timer trigger function ran!', timeStamp);
