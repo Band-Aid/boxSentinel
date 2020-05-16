@@ -1,7 +1,6 @@
 const azure = require('azure-storage')
-const tableService = azure.createTableService()
+const APIManager = require('./api')
 const BoxSDK = require('box-node-sdk')
-const JWT = process.env.JWT
 const SDK = new BoxSDK({
     clientID: process.env.clientID,
     clientSecret: process.env.clientSecret,
@@ -12,47 +11,54 @@ const SDK = new BoxSDK({
     }
 });
 const serviceAccountClient = SDK.getAppAuthClient('enterprise', process.env.eid)
-const logicAppURL = proces.env.LOGICAPP
-const APIManager = require('./api')
-
+const logicAppURL = process.env.LOGICAPPURL
+const tableService = azure.createTableService()
 const tablename = "eventstream"
-module.exports = async function (context, req) {
 
-    let data = initEvents()
+function getEvents(streamPosition) {
+    serviceAccountClient.getEvents({
+        stream_position: StereoPannerNode,
+        stream_type: 'admin_logs'
+    },function(err,stream){
+        if (err){
+            context.log(err)
+        }
+    })
+    .then(event=>{
+        let data = JSON.stringify(event)
+        return data
+        
+        // requestCall.post()
+    })
+}
 
-    context.log('JavaScript HTTP trigger function processed a request.')
 
-
-    // let data = await getEvents(0)
-    //     context.log(data)
-
-    //    if (req.query.name || (req.body && req.body.name)) {
-    context.res = {
-        // status: 200, /* Defaults to 200 */
-        // body: data.next_stream_position
-        body: data
-    };
+module.exports = async function (context, myTimer) {
+    var timeStamp = new Date().toISOString();
+    context.log('JavaScript timer trigger function ran!', timeStamp);
+    let data =  initEvents()
+    context.log(value)
 };
 
 function initEvents() {
-
+    
     var query = new azure.TableQuery()
         .where('PartitionKey eq ?', 'part1');
     tableService.queryEntities(tablename, query, null, function (error, result, response) {
         if (!error) {
-
+           
             let nextStraemPosition = result.entries[0].NEXTSTREAMPOSITION
 
-            if (nextStraemPosition._ === null) {
+            if (nextStraemPosition._===null) {
                 console.log('is null')
-                GetEvents(0)
-            }
-            else {
-                console.log(nextStraemPosition._)
-                GetEvents(nextStraemPosition._)
-            }
+                 GetEvents(0)
+             }
+             else {
+                 console.log(nextStraemPosition._)
+                 GetEvents(nextStraemPosition._)
+             }
         }
-        return "done"
+return "done"
     });
 }
 
@@ -66,9 +72,9 @@ function GetEvents(steamPosition) {
         }
     })
         .then(event => {
-            console.log("the next stream position is " + event.next_stream_position)
-            let nextStreamPosition = event.next_stream_position
-            // console.log(event)
+            console.log("the next stream position is "+event.next_stream_position)
+            let nextStreamPosition  = event.next_stream_position
+           // console.log(event)
             let entity = {
                 PartitionKey: 'part1',
                 RowKey: 'row1',
@@ -77,11 +83,12 @@ function GetEvents(steamPosition) {
             console.log(event.entries)
             tableService.insertOrReplaceEntity(tablename, entity, function (error, result, response) {
                 if (!error) {
-
+                   
                 }
             });
-            if (event.chunk_size !== 0) {
-                APIManager.post(logicAppURL, null, event.entries)
+            if(event.chunk_size !== 0)
+            {
+                APIManager.post(logicAppURL,null,event.entries)
             }
             // requestCall.post()
         })
