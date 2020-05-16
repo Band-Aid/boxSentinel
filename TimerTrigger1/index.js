@@ -18,30 +18,28 @@ const tablename = "eventstream"
 module.exports = async function (context, myTimer) {
     var timeStamp = new Date().toISOString();
     context.log('JavaScript timer trigger function ran!', timeStamp);
-    let data =  initEvents()
-    context.log(value)
+    initEvents()
 };
 
 function initEvents() {
-    
+
     var query = new azure.TableQuery()
-        .where('PartitionKey eq ?', 'part1');
+        .where('PartitionKey eq ?', 'part1')
     tableService.queryEntities(tablename, query, null, function (error, result, response) {
         if (!error) {
-           
+
             let nextStraemPosition = result.entries[0].NEXTSTREAMPOSITION
 
-            if (nextStraemPosition._===null) {
+            if (nextStraemPosition._ === null) {
                 console.log('is null')
-                 GetEvents(0)
-             }
-             else {
-                 console.log(nextStraemPosition._)
-                 GetEvents(nextStraemPosition._)
-             }
+                GetEvents(0)
+            }
+            else {
+                console.log(nextStraemPosition._)
+                GetEvents(nextStraemPosition._)
+            }
         }
-return "done"
-    });
+    })
 }
 
 function GetEvents(steamPosition) {
@@ -54,9 +52,9 @@ function GetEvents(steamPosition) {
         }
     })
         .then(event => {
-            console.log("the next stream position is "+event.next_stream_position)
-            let nextStreamPosition  = event.next_stream_position
-           // console.log(event)
+            console.log("the next stream position is " + event.next_stream_position)
+            let nextStreamPosition = event.next_stream_position
+            // console.log(event)
             let entity = {
                 PartitionKey: 'part1',
                 RowKey: 'row1',
@@ -65,13 +63,12 @@ function GetEvents(steamPosition) {
             console.log(event.entries)
             tableService.insertOrReplaceEntity(tablename, entity, function (error, result, response) {
                 if (!error) {
-                   
+
                 }
-            });
-            if(event.chunk_size !== 0)
-            {
-                APIManager.post(logicAppURL,null,event.entries)
+            })
+            //If event chunk is bigger than 0, out put to logicAPP for sentinel digestion
+            if (event.chunk_size !== 0) {
+                APIManager.post(logicAppURL, null, event.entries)
             }
-            // requestCall.post()
         })
 }
