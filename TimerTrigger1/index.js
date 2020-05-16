@@ -12,7 +12,7 @@ const SDK = new BoxSDK({
     }
 });
 const serviceAccountClient = SDK.getAppAuthClient('enterprise', process.env.eid)
-const logicAppURL = "https://prod-22.japaneast.logic.azure.com:443/workflows/5480738687b04983a96f14567271c1ca/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Zaxg5luPEEXlaupbSw9-Pf1-EXnyXpeBZI4qlNnx_hY"
+const logicAppURL = proces.env.LOGICAPP
 const APIManager = require('./api')
 
 const tablename = "eventstream"
