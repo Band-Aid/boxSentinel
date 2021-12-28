@@ -7,9 +7,8 @@
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
-    "axios": "^0.21.2",
-    "azure-storage": "^2.10.3",
-    "box-node-sdk": "^1.32.0"
-  },
-  "devDependencies": {}
+    "@azure/storage-queue": "^12.7.0",
+    "axios": "^0.24.0",
+    "box-node-sdk": "^2.0.0"
+  }
 }

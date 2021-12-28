@@ -1,4 +1,6 @@
-const azure = require('azure-storage')
+
+const { QueueClient, QueueServiceClient } = require("@azure/storage-queue");
+const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const APIManager = require('./api')
 const BoxSDK = require('box-node-sdk')
 const SDK = new BoxSDK({
@@ -12,40 +14,39 @@ const SDK = new BoxSDK({
 });
 const serviceAccountClient = SDK.getAppAuthClient('enterprise', process.env.eid)
 const logicAppURL = process.env.LOGICAPPURL
-const tableService = azure.createTableService()
-const tablename = "eventstream"
+const queueServiceClient = QueueServiceClient.fromConnectionString(connectionString);
+const queueClient = queueServiceClient.getQueueClient("nextstreamposition");
+
 
 module.exports = async function (context, myTimer) {
     var timeStamp = new Date().toISOString();
     context.log('JavaScript timer trigger function ran!', timeStamp);
     initEvents()
-};
 
-function initEvents() {
-
-    var query = new azure.TableQuery()
-        .where('PartitionKey eq ?', 'part1')
-    tableService.queryEntities(tablename, query, null, function (error, result, response) {
-        if (!error) {
-
-            let nextStraemPosition = result.entries[0].NEXTSTREAMPOSITION
-
-            if (nextStraemPosition._ === null) {
-                console.log('is null')
-                GetEvents(0)
-            }
-            else {
-                console.log(nextStraemPosition._)
-                GetEvents(nextStraemPosition._)
-            }
-        }
-    })
 }
 
-function GetEvents(steamPosition) {
-    let data = serviceAccountClient.events.get({
+async function initEvents() {
+
+
+    var receivedMessages = await queueClient.receiveMessages();
+    const firstMessage = receivedMessages.receivedMessageItems[0];
+    if(typeof firstMessage === 'undefined')
+    {
+        GetEvents(0)
+    }
+    else{
+        GetEvents(firstMessage.messageText)
+    }
+    
+
+
+}
+      
+
+async function GetEvents(steamPosition) {
+    let data1 = await serviceAccountClient.events.get({
         stream_position: steamPosition,
-        stream_type: 'admin_logs'
+        stream_type: 'admin_logs_streaming'
     }, function (err, stream) {
         if (err) {
             context.log(err)
@@ -53,22 +54,32 @@ function GetEvents(steamPosition) {
     })
         .then(event => {
             console.log("the next stream position is " + event.next_stream_position)
-            let nextStreamPosition = event.next_stream_position
-            // console.log(event)
-            let entity = {
-                PartitionKey: 'part1',
-                RowKey: 'row1',
-                NEXTSTREAMPOSITION: nextStreamPosition
-            };
-            console.log(event.entries)
-            tableService.insertOrReplaceEntity(tablename, entity, function (error, result, response) {
-                if (!error) {
-
-                }
-            })
-            //If event chunk is bigger than 0, out put to logicAPP for sentinel digestion
-            if (event.chunk_size !== 0) {
-                APIManager.post(logicAppURL, null, event.entries)
+            return event
+            
+        })
+     await APIManager.post(logicAppURL, null, data1.entries)
+     
+  
+    while(true){
+        
+        if(data1.chunk_size===0){
+            await queueClient.sendMessage(data1.next_stream_position.toString())
+            break
+        }
+        data1 = await serviceAccountClient.events.get({
+            stream_position: data1.next_stream_position,
+            stream_type: 'admin_logs_streaming'
+        }, function (err, stream) {
+            if (err) {
+                context.log(err)
             }
         })
+            .then(event => {
+                console.log("the next stream position is " + event.next_stream_position)
+                return event
+                
+            })
+         await APIManager.post(logicAppURL, null, data1.entries)
+      
+    }
 }
